@@ -54,6 +54,9 @@ void            stati(struct inode*, struct stat*);
 int             writei(struct inode*, int, uint64, uint, uint);
 void            itrunc(struct inode*);
 
+//blocking.c
+void            blockings_initialize();
+
 // ramdisk.c
 void            ramdiskinit(void);
 void            ramdiskintr(void);

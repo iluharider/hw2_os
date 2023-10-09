@@ -15,6 +15,7 @@
 #include "sleeplock.h"
 #include "file.h"
 #include "fcntl.h"
+#include "blocking.h"
 
 // Fetch the nth word-sized system call argument as a file descriptor
 // and return both the descriptor and the corresponding struct file.
@@ -502,4 +503,23 @@ sys_pipe(void)
     return -1;
   }
   return 0;
+}
+
+//0, 1, 2, 3 for getting lock, activating it, releasing and deleting respectively
+uint64
+sys_blocking(void)
+{
+  int bl_cmd, bl_id;
+  argint(0, &bl_cmd);
+  argint(1, &bl_id);
+  if (bl_cmd == BL_GET) {
+	return blocking_get();
+  } else if (bl_cmd == BL_ACQUIRE) {
+	return blocking_block(bl_id);
+  } else if (bl_cmd == BL_RELEASE) {
+	return blocking_release(bl_id);
+  } else if (bl_cmd == BL_DELETE) {
+	return blocking_delete(bl_id);
+  }
+  return -1;
 }
