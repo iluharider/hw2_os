@@ -32,47 +32,33 @@ int main(int argc, char* argv[])
   error_exiting(pipe(child_pipe), "can't create pipe");
   error_exiting(pipe(parent_pipe), "can't create pipe");
 
+  int lock = blocking(BL_GET, -1);                                         //INIT LOCK
+  error_exiting(lock, "initializing of lock didn't work");
+
   int childPid = fork();
   error_exiting(childPid, "can't create child process");
   if (childPid == 0) {
 	close(parent_pipe[0]); 
 	close(child_pipe[1]);  
-	int lock;
-	error_exiting(read(child_pipe[0], &lock, sizeof(lock)) > 0 ? 0 : -1, "can't read lock id from child");
 
-	error_exiting(blocking(BL_ACQUIRE, lock), "can't lock sleeplock");
+	error_exiting(blocking(BL_ACQUIRE, lock), "can't lock sleeplock");    //ACQUIRE LOCK 
 	read_write(child_pipe[0], parent_pipe[1]);
-	error_exiting(blocking(BL_RELEASE, lock), "can't release sleeplock");
-	error_exiting(blocking(BL_DELETE, lock), "can't delete sleeplock");
+	error_exiting(blocking(BL_RELEASE, lock), "can't release sleeplock"); //RELEASE LOCK 
 
   } else {
 	close(parent_pipe[1]); 
 	close(child_pipe[0]);
 
-	int lock = blocking(BL_GET, -1);
-	error_exiting(lock, "can't create new sleep lock");
-	error_exiting(blocking(BL_ACQUIRE, lock), "can't lock sleeplock");
-
-	
-	write(child_pipe[1], &lock, sizeof(lock));
-
 	for (int i = 0; argv[1][i] != '\0'; ++i)
 	    write(child_pipe[1], argv[1] + i, 1);
 	close(child_pipe[1]);
-	
-	error_exiting(blocking(BL_RELEASE, lock), "can't release sleeplock");
 
-	char a[1];
-	int is_locked = 0;
+	error_exiting(blocking(BL_ACQUIRE, lock), "can't lock sleeplock");    //ACQUIRE LOCK 
+	read_write(parent_pipe[0], -1);
+	error_exiting(blocking(BL_RELEASE, lock), "can't release sleeplock"); //RELEASE LOCK 	
 
-	while (read(parent_pipe[0], a, 1) > 0) {
-	  if (!is_locked) {
-		error_exiting(blocking(BL_ACQUIRE, lock), "can't lock sleeplock");
-		is_locked = 1;
-	  }
-	  printf("%d: received %c\n", getpid(), a[0]);
-	}
 	close(parent_pipe[0]);
+	error_exiting(blocking(BL_DELETE, lock), "can't delete sleeplock");     //FREE LOCK
   }
   return 0;
 }
